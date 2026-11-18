@@ -4,6 +4,8 @@ An incident console built contract-first: a Protobuf API checked by `buf`, a Nod
 
 Status: built step by step, locally. Not published.
 
+Learning notes: [LEARN.md](LEARN.md). Interview brief: `../briefs/react-ops-console.md`.
+
 ## Build log
 
 ### Step 1: the contract
