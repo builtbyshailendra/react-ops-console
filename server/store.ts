@@ -23,6 +23,7 @@ export interface EventRow {
   kind: string
   text: string
   at: number
+  incident_version: number
 }
 
 export class StaleVersionError extends Error {}
@@ -45,7 +46,8 @@ export class Store {
       CREATE INDEX IF NOT EXISTS incidents_newest ON incidents (opened_at DESC, id DESC);
       CREATE TABLE IF NOT EXISTS timeline (
         seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, incident_id TEXT NOT NULL,
-        author TEXT NOT NULL, kind TEXT NOT NULL, text TEXT NOT NULL, at INTEGER NOT NULL);
+        author TEXT NOT NULL, kind TEXT NOT NULL, text TEXT NOT NULL, at INTEGER NOT NULL,
+        incident_version INTEGER NOT NULL DEFAULT 0);
       CREATE INDEX IF NOT EXISTS timeline_incident ON timeline (incident_id, seq);
     `)
   }
@@ -72,7 +74,7 @@ export class Store {
       const id = `INC-${String(1000 + i)}`
       const owner = status >= 2 ? ['asha', 'ravi', 'meera'][i % 3] : ''
       insert.run(id, `${service}: ${problems[Math.floor(rand() * problems.length)]}`, sev, status, service, owner, opened, opened)
-      this.addEvent(id, 'monitoring', 'opened', `Alert fired for ${service}`, opened, false)
+      this.addEvent(id, 'monitoring', 'opened', `Alert fired for ${service}`, { at: opened, version: 1, publish: false })
     }
   }
 
@@ -119,16 +121,19 @@ export class Store {
     return this.get(id)
   }
 
-  addEvent(incidentId: string, author: string, kind: string, text: string, at = Date.now(), publish = true): EventRow {
-    const ev: EventRow = { id: randomUUID(), incident_id: incidentId, author, kind, text, at }
-    this.db.prepare('INSERT INTO timeline (id, incident_id, author, kind, text, at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(ev.id, ev.incident_id, ev.author, ev.kind, ev.text, ev.at)
-    if (publish) this.events.emit(incidentId, ev)
+  addEvent(incidentId: string, author: string, kind: string, text: string,
+    opts: { at?: number; version?: number; publish?: boolean } = {}): EventRow {
+    const ev: EventRow = {
+      id: randomUUID(), incident_id: incidentId, author, kind, text, at: opts.at ?? Date.now(), incident_version: opts.version ?? 0,
+    }
+    this.db.prepare('INSERT INTO timeline (id, incident_id, author, kind, text, at, incident_version) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(ev.id, ev.incident_id, ev.author, ev.kind, ev.text, ev.at, ev.incident_version)
+    if (opts.publish !== false) this.events.emit(incidentId, ev)
     return ev
   }
 
   timeline(incidentId: string): EventRow[] {
-    return this.db.prepare('SELECT id, incident_id, author, kind, text, at FROM timeline WHERE incident_id = ? ORDER BY seq')
+    return this.db.prepare('SELECT id, incident_id, author, kind, text, at, incident_version FROM timeline WHERE incident_id = ? ORDER BY seq')
       .all(incidentId) as unknown as EventRow[]
   }
 

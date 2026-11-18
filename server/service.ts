@@ -37,6 +37,7 @@ const toIncident = (r: IncidentRow): Incident => create(IncidentSchema, {
 
 const toEvent = (e: EventRow): TimelineEvent => create(TimelineEventSchema, {
   id: e.id, incidentId: e.incident_id, author: e.author, kind: e.kind, text: e.text, at: timestampFromMs(e.at),
+  incidentVersion: BigInt(e.incident_version),
 })
 
 // Live timeline events buffered per subscriber before it counts as stuck.
@@ -94,7 +95,7 @@ export function routes(store: Store) {
         throw new ConnectError(`already ${STATUS_NAME[current.status]} by ${current.owner || 'someone'}`, Code.FailedPrecondition)
       }
       const updated = guard(() => store.update(req.id, Number(req.expectedVersion), { status: Status.ACKNOWLEDGED, owner: user.name }))
-      store.addEvent(req.id, user.name, 'acknowledged', `${user.name} is on it`)
+      store.addEvent(req.id, user.name, 'acknowledged', `${user.name} is on it`, { version: updated.version })
       return { incident: toIncident(updated) }
     },
 
@@ -108,7 +109,7 @@ export function routes(store: Store) {
         throw new ConnectError(`can't move from ${STATUS_NAME[current.status]} to ${STATUS_NAME[req.status] ?? 'that'}`, Code.FailedPrecondition)
       }
       const updated = guard(() => store.update(req.id, Number(req.expectedVersion), { status: req.status }))
-      store.addEvent(req.id, user.name, 'status', `${user.name} marked it ${STATUS_NAME[req.status]}`)
+      store.addEvent(req.id, user.name, 'status', `${user.name} marked it ${STATUS_NAME[req.status]}`, { version: updated.version })
       return { incident: toIncident(updated) }
     },
 

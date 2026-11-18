@@ -45,6 +45,10 @@ message TimelineEvent {
   string kind = 4; // "opened", "acknowledged", "status", "note"
   string text = 5;
   google.protobuf.Timestamp at = 6;
+  // The incident's version once this event happened, so a client can tell
+  // its copy is stale without comparing clocks. 0 for notes, which don't
+  // change the incident.
+  int64 incident_version = 7;
 }
 
 service IncidentService {

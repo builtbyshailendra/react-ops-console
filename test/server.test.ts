@@ -139,7 +139,9 @@ test('WatchTimeline sends history, then live events in order', async () => {
 
   await client.acknowledge({ id: inc.id, expectedVersion: inc.version }, ASHA)
   await client.addNote({ id: inc.id, text: 'checking the deploy' }, RAVI)
-  assert.equal((await stream.next()).value.event.kind, 'acknowledged')
+  const ack = (await stream.next()).value.event
+  assert.equal(ack.kind, 'acknowledged')
+  assert.equal(ack.incidentVersion, inc.version + 1n, 'a status event says which version it produced')
   const note = (await stream.next()).value.event
   assert.equal(note.kind, 'note')
   assert.equal(note.author, 'ravi')
