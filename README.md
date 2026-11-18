@@ -16,4 +16,6 @@ Status: built step by step, locally. Not published.
 
 What broke: I first set the breaking-change category to `WIRE_JSON`. The test showed it **allowed removing an RPC**: wire categories only judge how messages are encoded, and an RPC isn't a message. A client calling it would fail at runtime. Switched to `FILE`, the strictest category, which also covers generated code and services.
 
+Also broke: the generated code used TypeScript `enum`s. Node runs `.ts` files by stripping types, and an `enum` isn't a type: it produces runtime code, so `tsc` (with `erasableSyntaxOnly`) refused it (TS1294). The fix is the plugin option `erasable_syntax=true`, which generates `as const` objects instead. Same values (`Status.RESOLVED` is still 4), and Node can now import the generated file with no build step.
+
 Note: npm held back `@bufbuild/buf`'s install script for review; buf works without it, so it stays unapproved.

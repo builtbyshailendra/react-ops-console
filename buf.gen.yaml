@@ -5,4 +5,6 @@ inputs:
 plugins:
   - local: protoc-gen-es
     out: gen
-    opt: [target=ts, import_extension=ts]
+    # erasable_syntax: enums as `as const` objects, not TypeScript enums, so Node
+    # can run the generated code by stripping types (no build step).
+    opt: [target=ts, import_extension=ts, erasable_syntax=true]
