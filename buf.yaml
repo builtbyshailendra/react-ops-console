@@ -1,0 +1,11 @@
+# buf: lint the contract, and (in test/contract.test.ts) refuse breaking changes.
+version: v2
+modules:
+  - path: proto
+lint:
+  use: [STANDARD]
+breaking:
+  # FILE is the strictest category: wire and JSON compatibility, plus the
+  # generated code and the services themselves. WIRE_JSON (tried first) only
+  # judges message encoding, so it allowed deleting an RPC that clients call.
+  use: [FILE]

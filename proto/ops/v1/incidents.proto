@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+// The incident console's API. One source of truth for the server and the
+// browser: both use code generated from this file.
+package ops.v1;
+
+import "google/protobuf/timestamp.proto";
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_SEV1 = 1;
+  SEVERITY_SEV2 = 2;
+  SEVERITY_SEV3 = 3;
+  SEVERITY_SEV4 = 4;
+}
+
+// Incidents move forward only: triggered → acknowledged → mitigated → resolved.
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_TRIGGERED = 1;
+  STATUS_ACKNOWLEDGED = 2;
+  STATUS_MITIGATED = 3;
+  STATUS_RESOLVED = 4;
+}
+
+message Incident {
+  string id = 1;
+  string title = 2;
+  Severity severity = 3;
+  Status status = 4;
+  string service = 5;
+  string owner = 6; // who acknowledged it; empty until then
+  google.protobuf.Timestamp opened_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  // Bumped on every change. Updates send the version they read; a stale
+  // one is refused (Aborted), so two people can't silently overwrite
+  // each other.
+  int64 version = 9;
+}
+
+message TimelineEvent {
+  string id = 1;
+  string incident_id = 2;
+  string author = 3;
+  string kind = 4; // "opened", "acknowledged", "status", "note"
+  string text = 5;
+  google.protobuf.Timestamp at = 6;
+}
+
+service IncidentService {
+  rpc ListIncidents(ListIncidentsRequest) returns (ListIncidentsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS; // lets Connect use GET, so responses can be cached
+  }
+  rpc GetIncident(GetIncidentRequest) returns (GetIncidentResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc Acknowledge(AcknowledgeRequest) returns (AcknowledgeResponse);
+  rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
+  rpc AddNote(AddNoteRequest) returns (AddNoteResponse);
+  // The incident's timeline so far, then each new event as it happens.
+  rpc WatchTimeline(WatchTimelineRequest) returns (stream WatchTimelineResponse);
+}
+
+message ListIncidentsRequest {
+  repeated Status statuses = 1;    // empty: any status
+  Severity at_least = 2;           // e.g. SEV2 also returns SEV1; unspecified: any
+  int32 page_size = 3;             // default 20, at most 100
+  string page_token = 4;           // from the previous response; opaque to clients
+}
+
+message ListIncidentsResponse {
+  repeated Incident incidents = 1;
+  string next_page_token = 2;      // empty on the last page
+}
+
+message GetIncidentRequest {
+  string id = 1;
+}
+
+message GetIncidentResponse {
+  Incident incident = 1;
+}
+
+message AcknowledgeRequest {
+  string id = 1;
+  int64 expected_version = 2;
+}
+
+message AcknowledgeResponse {
+  Incident incident = 1;
+}
+
+message UpdateStatusRequest {
+  string id = 1;
+  Status status = 2;
+  int64 expected_version = 3;
+}
+
+message UpdateStatusResponse {
+  Incident incident = 1;
+}
+
+message AddNoteRequest {
+  string id = 1;
+  string text = 2;
+}
+
+message AddNoteResponse {
+  TimelineEvent event = 1;
+}
+
+message WatchTimelineRequest {
+  string id = 1;
+}
+
+message WatchTimelineResponse {
+  TimelineEvent event = 1;
+}

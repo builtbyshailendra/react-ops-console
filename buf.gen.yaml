@@ -1,0 +1,8 @@
+# TypeScript for both the Node server and the browser, from one contract.
+version: v2
+inputs:
+  - directory: proto
+plugins:
+  - local: protoc-gen-es
+    out: gen
+    opt: [target=ts, import_extension=ts]
