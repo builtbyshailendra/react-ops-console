@@ -1,8 +1,10 @@
 # react-ops-console
 
+[![ci](https://github.com/builtbyshailendra/react-ops-console/actions/workflows/ci.yml/badge.svg)](https://github.com/builtbyshailendra/react-ops-console/actions/workflows/ci.yml)
+
 An incident console built contract-first: a Protobuf API checked by `buf`, a Node server speaking ConnectRPC with SQLite storage, and a React 19 front end using TanStack Query. Live timeline updates stream from the server, and two people editing the same incident can't silently overwrite each other.
 
-Status: built step by step, locally. Not published.
+Status: built step by step. Published 20 Nov 2026; CI runs the contract, server and browser tests on every push.
 
 Learning notes: [LEARN.md](LEARN.md). Interview brief: `../briefs/react-ops-console.md`.
 

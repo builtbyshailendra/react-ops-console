@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - name: Protobuf lint, and generated code is up to date
+        run: |
+          npx buf lint
+          npx buf generate
+          git diff --exit-code gen
+      - run: npm run typecheck
+      - name: contract and server tests
+        run: npm test
+      - name: browser tests (Playwright's Chromium)
+        env:
+          PW_CHANNEL: ""
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
